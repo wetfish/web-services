@@ -1,8 +1,4 @@
 # PROD MODULES
-[submodule "prod/services/blog"]
-    path = prod/services/blog
-    url = https://github.com/wetfish/blog.git
-    branch = release
 [submodule "prod/services/click"]
     path = prod/services/click
     url = https://github.com/wetfish/click.git

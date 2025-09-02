@@ -1,103 +1,207 @@
-#!/bin/bash
-
+#!/usr/bin/env bash
 set -euo pipefail
 
-# Get current timestamp
-timestamp=$(date +%Y-%m-%d)
-backup_dir="${timestamp}-service-backups"
-mkdir -p "$backup_dir"
+BACKUP_DIR="/mnt/wetfish/backups"
+SERVICE_DIR="/opt/web-services-cybaxx/prod/services"
+DRY_RUN=0
+DEBUG="${DEBUG:-0}"
 
-# Define services and their container names
-declare -a services=(
-  "wiki wiki-db"
-  "online online-db"
-  "danger danger-db"
-  "click click-db"
-)
+ALLOWED_SERVICES=("wiki" "online" "click" "danger")
 
-# Define root directory for services
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SERVICES_ROOT="$(realpath "$SCRIPT_DIR/../prod/services")"
-
-# Utility: Load a single variable from an .env file dynamically
-load_var_from_env() {
-  local file="$1"
-  local key="$2"
-  grep -E "^${key}=" "$file" | cut -d '=' -f2- | tr -d '"' | tr -d "'"
+log() {
+  local ts
+  ts=$(date "+%Y-%m-%d %H:%M:%S")
+  echo "$ts - $*"
 }
 
-# Generate random passwords for services dynamically (from `init-services.sh`)
-export_secrets() {
-  export ENV_TAG="stage"
-
-  if [[ ${#SERVICE_ITEMS[@]} -eq 0 ]]; then
-    count_dir
+debug() {
+  if [[ "$DEBUG" == "1" ]]; then
+    local ts
+    ts=$(date "+%Y-%m-%d %H:%M:%S")
+    echo "$ts - [DEBUG] $*"
   fi
-
-  for item in "${SERVICE_ITEMS[@]}"; do
-    local service_name
-    service_name="${item//-/_}"
-
-    local root_password
-    root_password=$(generate_random_pass)
-    local password
-    password=$(generate_random_pass)
-
-    export "${service_name^^}_MARIADB_ROOT_PASSWORD"="$root_password"
-    export "${service_name^^}_MARIADB_PASSWORD"="$password"
-  done
-
-  export DB_PASSWORD
-  DB_PASSWORD=$(generate_random_pass)
-  export LOGIN_PASSWORD
-  LOGIN_PASSWORD=$(generate_random_pass)
-  export ADMIN_PASSWORD
-  ADMIN_PASSWORD=$(generate_random_pass)
-  export BAN_PASSWORD
-  BAN_PASSWORD=$(generate_random_pass)
-  export ALLOWED_EMBEDS="/^.*\.wetfish.net$/i"
 }
 
-# Unpacking loop for services
-for entry in "${services[@]}"; do
-  IFS=' ' read -r service_name container <<< "$entry"
+usage() {
+  echo "Usage: $0 [--dry-run]"
+  echo "Set DEBUG=1 to enable debug output"
+  exit 1
+}
 
-  env_file="${SERVICES_ROOT}/${service_name}/mariadb.env"
-
-  if [[ ! -f "$env_file" ]]; then
-    echo "⚠️  Warning: Env file for $service_name not found at $env_file. Skipping..."
-    continue
-  fi
-
-  echo "🔍 Reading secrets for $service_name..."
-
-  # Load database name and root password dynamically from the mariadb.env file
-  db_name=$(load_var_from_env "$env_file" "MARIADB_DATABASE")
-  root_password=$(load_var_from_env "$env_file" "MARIADB_ROOT_PASSWORD")
-
-  if [[ -z "$db_name" || -z "$root_password" ]]; then
-    echo "❌ Error: Missing database name or root password in $env_file. Skipping..."
-    continue
-  fi
-
-  # Construct backup filename
-  backup_filename="${service_name}-backup-${timestamp}.sql"
-
-  # Check if the backup file exists for restoration
-  backup_file="${SCRIPT_DIR}/${backup_filename}"
-  if [[ ! -f "$backup_file" ]]; then
-    echo "⚠️  Warning: Backup file for $service_name not found at $backup_file. Skipping..."
-    continue
-  fi
-
-  echo "📦 Restoring $db_name to $container from backup file $backup_filename..."
-
-  # Restore the database from the backup file
-  docker exec "$container" mysql -u root --password="$root_password" "$db_name" < "$backup_file"
-
-  # Cleanup sensitive vars
-  unset db_name
-  unset root_password
+for arg in "$@"; do
+  case "$arg" in
+    --dry-run) DRY_RUN=1 ;;
+    -h|--help) usage ;;
+    *) echo "Unknown argument: $arg"; usage ;;
+  esac
 done
 
-echo "✅ All backups restored successfully!"
+get_env_var() {
+  local service="$1" key="$2"
+  local env_file="$SERVICE_DIR/$service/mariadb.env"
+  if [[ -f "$env_file" ]]; then
+    grep -E "^${key}=" "$env_file" | cut -d '=' -f2- || true
+  fi
+}
+
+get_mariadb_root_password() {
+  local pass
+  pass=$(get_env_var "$1" "MARIADB_ROOT_PASSWORD")
+  debug "Root password for '$1': ${pass:+<hidden>}"
+  echo "$pass"
+}
+
+get_mariadb_user_password() {
+  local pass
+  pass=$(get_env_var "$1" "MARIADB_PASSWORD")
+  debug "User password for '$1': ${pass:+<hidden>}"
+  echo "$pass"
+}
+
+get_database_name() {
+  case "$1" in
+    wiki) echo "wiki" ;;
+    click|danger) echo "fishy" ;;
+    online) echo "forums" ;;
+    *) echo "" ;;
+  esac
+}
+
+apply_backup() {
+  local service="$1" container="$2" db="$3" backup_file="$4"
+
+  local root_pass user_pass
+  root_pass=$(get_mariadb_root_password "$service")
+  user_pass=$(get_mariadb_user_password "$service")
+
+  if [[ -z "$root_pass" ]]; then
+    log "ERROR: No root password found for $service"
+    return 1
+  fi
+
+  log "Applying backup for service '$service' to database '$db' in container '$container'..."
+
+  if [[ $DRY_RUN -eq 1 ]]; then
+    echo "[DRY RUN] cat $backup_file | docker exec -i $container mysql -u root -p<REDACTED> $db"
+    echo "[DRY RUN] docker exec $container mysqlcheck -u root -p<REDACTED> --databases $db"
+    return 0
+  fi
+
+  #DEBUG log $root_pass
+  #DEBUG log $backup_file
+
+  # Try with root credentials, stream output live
+  if cat "$backup_file" | docker exec -i "$container" mysql -u root -p"$root_pass" "$db"; then
+    log "Backup successfully applied using root credentials."
+  else
+    log "Root credentials backup failed, trying user credentials..."
+
+    if [[ -n "$user_pass" ]]; then
+      if cat "$backup_file" | docker exec -i "$container" mysql -u "$service" -p"$user_pass" "$db"; then
+        log "Backup successfully applied using user credentials."
+      else
+        log "ERROR: Backup failed using both root and user credentials."
+        return 1
+      fi
+    else
+      log "ERROR: No user password found; cannot retry without it."
+      return 1
+    fi
+  fi
+
+  log "Running mysqlcheck on $db..."
+
+  if docker exec "$container" mysqlcheck -u root -p"$root_pass" --databases "$db"; then
+    log "mysqlcheck passed for $db"
+  else
+    log "WARNING: mysqlcheck failed or returned warnings for $db"
+  fi
+}
+
+is_allowed_service() {
+  local svc="$1"
+  for allowed in "${ALLOWED_SERVICES[@]}"; do
+    if [[ "$svc" == "$allowed" ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+find_latest_backup_dir() {
+  shopt -s nullglob
+  local dirs=( "$BACKUP_DIR"/[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9]-service-backups-????????-????-????-????-???????????? )
+  shopt -u nullglob
+
+  if [[ ${#dirs[@]} -eq 0 ]]; then
+    echo ""
+    return 1
+  fi
+
+  printf '%s\n' "${dirs[@]}" | sort -V | tail -n 1
+}
+
+main() {
+  log "--- Starting MariaDB Restore Process ---"
+
+  local latest_backup_dir
+  latest_backup_dir=$(find_latest_backup_dir) || {
+    log "No backup directories found matching pattern. Exiting."
+    exit 1
+  }
+
+  debug "Using latest backup directory: $latest_backup_dir"
+
+  local containers
+  containers=$(docker ps --filter ancestor=mariadb:10.10 --format "{{.Names}}")
+
+  if [[ -z "$containers" ]]; then
+    log "No MariaDB containers running. Exiting."
+    exit 0
+  fi
+
+  for container in $containers; do
+    if [[ "$container" =~ ^(.+)-db$ ]]; then
+      service="${BASH_REMATCH[1]}"
+    else
+      log "Skipping unrecognized container name format: $container"
+      continue
+    fi
+
+    if ! is_allowed_service "$service"; then
+      log "Skipping service '$service' (not in allowlist)"
+      continue
+    fi
+
+    local db
+    db=$(get_database_name "$service")
+
+    if [[ -z "$db" ]]; then
+      log "INFO: Service '$service' has no database configured. Skipping."
+      continue
+    fi
+
+    shopt -s nullglob
+    local backups=( "$latest_backup_dir/${db}-backup-"*.sql )
+    shopt -u nullglob
+
+    if [[ ${#backups[@]} -eq 0 ]]; then
+      log "No backups found for service '$service' (database '$db') in $latest_backup_dir."
+      continue
+    fi
+
+    local latest_backup
+    latest_backup=$(printf '%s\n' "${backups[@]}" | sort -V | tail -n 1)
+
+    if [[ ! -f "$latest_backup" ]]; then
+      log "Backup file $latest_backup not found or not a regular file. Skipping."
+      continue
+    fi
+
+    apply_backup "$service" "$container" "$db" "$latest_backup"
+  done
+
+  log "--- Restore Process Complete ---"
+}
+
+main "$@"
