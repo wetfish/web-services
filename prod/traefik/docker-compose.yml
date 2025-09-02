@@ -1,0 +1,28 @@
+version: '2.4'
+services:
+  proxy:
+    container_name: ingress-proxy
+    # v2.6.2+ has issues reading strings as arrays from yaml config, stay on 2.6.1 for now
+    image: docker.io/traefik:v2.6.1
+    restart: unless-stopped
+    env_file: 
+      - "./traefik.env"
+    volumes:
+      # static config
+      - "./conf/static.yml:/etc/traefik/traefik.yml:ro"
+      # dynamic config
+      - "./conf/dynamic.yml:/etc/traefik/dynamic/dynamic.yml:ro"
+      # acme storage
+      - "./acme:/etc/traefik/acme:rw"
+      # log storage
+      - "./logs:/var/log/traefik:rw"
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      traefik-backend: {}
+
+networks:
+  # persistent, externally created
+  traefik-backend:
+    external: true

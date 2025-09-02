@@ -1,0 +1,38 @@
+# PROD MODULES
+[submodule "prod/services/click"]
+    path = prod/services/click
+    url = https://github.com/wetfish/click.git
+    branch = release
+[submodule "prod/services/danger"]
+    path = prod/services/danger
+    url = https://github.com/wetfish/danger.git
+    branch = release
+[submodule "prod/services/glitch"]
+    path = prod/services/glitch
+    url = https://github.com/wetfish/glitch.git
+    branch = release
+[submodule "prod/services/online"]
+    path = prod/services/online
+    url = https://github.com/wetfish/online.git
+    branch = release
+[submodule "prod/services/wiki"]
+    path = prod/services/wiki
+    url = https://github.com/wetfish/wiki.git
+    branch = release
+[submodule "prod/services/home"]
+    path = prod/services/home
+    url = https://github.com/wetfish/wetfish.net
+
+# STAGE MODULES
+[submodule "stage/services/wiki"]
+    path = stage/services/wiki-staging
+    url = https://github.com/wetfish/wiki.git
+    branch = main
+[submodule "stage/services/online"]
+    path = stage/services/online-staging
+    url = https://github.com/wetfish/online.git
+    branch = main
+[submodule "stage/services/home-staging"]
+    path = stage/services/home-staging
+    url = https://github.com/wetfish/wetfish.net.git
+    branch = main

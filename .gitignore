@@ -1,0 +1,3 @@
+traefik/acme/*
+traefik/logs/*
+traefik/traefik.env

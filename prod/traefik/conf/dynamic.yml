@@ -1,0 +1,142 @@
+http:
+  routers:
+    # wetfish.net - Wetfish Home Page
+    wetfish-home:
+      entrypoints:
+        - "websecure"
+      rule: "Host(`wetfish.net`)"
+      tls:
+        certResolver: letsencrypt
+        options:
+          - mintlsversion
+      middlewares:
+        - "ipwhitelist-cloudflare"
+      service: "wetfish-home"
+
+    # danger.wetfish.net
+    danger:
+      entrypoints:
+        - "websecure"
+      rule: "Host(`danger.wetfish.net`)"
+      tls:
+        certResolver: letsencrypt
+        options:
+          - mintlsversion
+      middlewares:
+        - "ipwhitelist-cloudflare"
+      service: "danger"
+
+    # wetfishonline.com
+    online:
+      entrypoints:
+        - "websecure"
+      rule: "Host(`wetfishonline.com`)"
+      tls:
+        certResolver: letsencrypt
+        options:
+          - mintlsversion
+      middlewares:
+        - "ipwhitelist-cloudflare"
+      service: "online"
+
+    # glitch.wetfish.net
+    glitch:
+      entrypoints:
+        - "websecure"
+      rule: "Host(`glitch.wetfish.net`)"
+      tls:
+        certResolver: letsencrypt
+        options:
+          - mintlsversion
+      middlewares:
+        - "ipwhitelist-cloudflare"
+      service: "glitch"
+
+    # click.wetfish.net
+    click:
+      entrypoints:
+        - "websecure"
+      rule: "Host(`click.wetfish.net`)"
+      tls:
+        certResolver: letsencrypt
+        options:
+          - mintlsversion
+      middlewares:
+        - "ipwhitelist-cloudflare"
+      service: "click"
+
+    # wiki.wetfish.net
+    wiki:
+      entrypoints:
+        - "websecure"
+      rule: "Host(`wiki.wetfish.net`)"
+      tls:
+        certResolver: letsencrypt
+        options:
+          - mintlsversion
+      middlewares:
+        - "ipwhitelist-cloudflare"
+      service: "wiki"
+
+  services:
+    wetfish-home:
+      loadBalancer:
+        servers:
+          - url: "http://wetfish-home.:80"
+
+    danger:
+      loadBalancer:
+        servers:
+          - url: "http://danger-web.:80"
+
+    online:
+      loadBalancer:
+        servers:
+          - url: "http://online-web.:80"
+
+    glitch:
+      loadBalancer:
+        servers:
+          - url: "http://glitch-web.:80"
+
+    click:
+      loadBalancer:
+        servers:
+          - url: "http://click-web.:80"
+
+    wiki:
+      loadBalancer:
+        servers:
+          - url: "http://wiki-web.:80"
+
+  middlewares:
+    ipwhitelist-cloudflare:
+      ipWhiteList:
+        sourceRange:
+          - 103.21.244.0/22
+          - 103.22.200.0/22
+          - 103.31.4.0/22
+          - 104.16.0.0/13
+          - 104.24.0.0/14
+          - 108.162.192.0/18
+          - 131.0.72.0/22
+          - 141.101.64.0/18
+          - 162.158.0.0/15
+          - 172.64.0.0/13
+          - 173.245.48.0/20
+          - 188.114.96.0/20
+          - 190.93.240.0/20
+          - 197.234.240.0/22
+          - 198.41.128.0/17
+
+tls:
+  options:
+    mintlsversion:
+      minVersion: VersionTLS12
+      cipherSuites:
+        - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+        - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305
+        - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+        - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
