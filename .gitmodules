@@ -11,9 +11,9 @@
     path = prod/services/glitch
     url = https://github.com/wetfish/glitch.git
     branch = release
-[submodule "prod/services/online"]
-    path = prod/services/online
-    url = https://github.com/wetfish/online.git
+[submodule "prod/services/forum"]
+    path = prod/services/forum
+    url = https://github.com/wetfish/forum.git
     branch = release
 [submodule "prod/services/wiki"]
     path = prod/services/wiki
@@ -28,9 +28,9 @@
     path = stage/services/wiki-staging
     url = https://github.com/wetfish/wiki.git
     branch = main
-[submodule "stage/services/online"]
-    path = stage/services/online-staging
-    url = https://github.com/wetfish/online.git
+[submodule "stage/services/forum"]
+    path = stage/services/online-forum
+    url = https://github.com/wetfish/forum.git
     branch = main
 [submodule "stage/services/home-staging"]
     path = stage/services/home-staging
