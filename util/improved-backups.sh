@@ -124,6 +124,16 @@ main() {
   # -------- Cleanup Old Backups --------
   log "Pruning backups older than ${RETENTION_DAYS} days..."
   find "$BACKUP_ROOT" -maxdepth 1 -type d -mtime +$RETENTION_DAYS -exec rm -rf {} +
+
+  # -------- Write Prometheus Metric --------
+  local textfile_dir="/var/lib/node_exporter/textfile_collector"
+  if [[ -d "$textfile_dir" ]]; then
+    echo "# HELP backup_last_success_timestamp Unix timestamp of last successful backup run" > "${textfile_dir}/backup.prom"
+    echo "# TYPE backup_last_success_timestamp gauge" >> "${textfile_dir}/backup.prom"
+    echo "backup_last_success_timestamp $(date +%s)" >> "${textfile_dir}/backup.prom"
+    log "Wrote backup metric to ${textfile_dir}/backup.prom"
+  fi
+
   log "Backup cycle completed successfully."
 }
 

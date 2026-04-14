@@ -1,6 +1,8 @@
 # Wetfish prod crontab (root) — document actual entries here
 # Copy to crontab with: crontab crontab.example
 # Real vultr-s3.conf credentials must exist at /opt/web-services/util/vultr-s3.conf
+# node_exporter must be running with --collector.textfile.directory=/var/lib/node_exporter/textfile_collector
+# See util/node_exporter.service for the correct systemd unit
 
 # DB backups + wiki upload sync to S3 every 6 hours
 0 */6 * * * /opt/web-services/util/improved-backups.sh >> /var/log/backups.log
