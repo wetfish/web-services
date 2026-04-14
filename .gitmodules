@@ -11,10 +11,10 @@
     path = prod/services/glitch
     url = https://github.com/wetfish/glitch.git
     branch = release
-[submodule "prod/services/forum"]
-	path = prod/services/forum
-	url = https://github.com/wetfish/forum.git
-	branch = master
+[submodule "prod/services/online"]
+	path = prod/services/online
+	url = https://github.com/wetfish/online.git
+	branch = release
 [submodule "prod/services/wiki"]
     path = prod/services/wiki
     url = https://github.com/wetfish/wiki.git
