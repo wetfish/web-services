@@ -1,3 +1,4 @@
 traefik/acme/*
 traefik/logs/*
 traefik/traefik.env
+util/vultr-s3.conf

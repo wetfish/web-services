@@ -1,0 +1,12 @@
+# Wetfish prod crontab (root) — document actual entries here
+# Copy to crontab with: crontab crontab.example
+# Real vultr-s3.conf credentials must exist at /opt/web-services/util/vultr-s3.conf
+
+# DB backups + wiki upload sync to S3 every 6 hours
+0 */6 * * * /opt/web-services/util/improved-backups.sh >> /var/log/backups.log
+
+# Disk usage alert — logs to /var/log/disk-check.log when root disk >= 80%
+0 * * * * df / | awk 'NR==2{gsub(/%/,"",$5); if($5+0>=80) print strftime("%F %T") " DISK ALERT: root at " $5 "%"}' >> /var/log/disk-check.log
+
+# Legacy upload sync (commented out — replaced by improved-backups.sh)
+#0 */6 * * * rclone --s3-no-check-bucket --config /opt/web-services/util/vultr-s3.conf copy /mnt/wetfish/wetfish/wiki/uploads/* vultr-s3:wetfish-uploads --ignore-existing
