@@ -19,6 +19,18 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      - "127.0.0.1:8082:8082"
+    networks:
+      traefik-backend: {}
+
+  promtail:
+    container_name: promtail
+    image: grafana/promtail:2.9.0
+    restart: unless-stopped
+    volumes:
+      - "./conf/promtail.yml:/etc/promtail/promtail.yml:ro"
+      - "./logs:/var/log/traefik:ro"
+    command: -config.file=/etc/promtail/promtail.yml
     networks:
       traefik-backend: {}
 
