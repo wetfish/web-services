@@ -34,11 +34,3 @@ scrape_configs:
           service:
           status:
           method:
-      - label_keep:
-          - job
-          - environment
-          - project
-          - router
-          - service
-          - status
-          - method
