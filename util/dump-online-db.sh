@@ -30,7 +30,7 @@ get_env_var() {
     exit 1
   }
 
-  grep -E "^${key}=" "$env_file" | head -1 | cut -d '=' -f2- | tr -d '"'"'
+  grep -E "^${key}=" "$env_file" | head -1 | cut -d '=' -f2- | tr -d "\"'"
 }
 
 main() {
